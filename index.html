@@ -1,54 +1,30 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>文件库</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.37/vue.global.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.27.2/axios.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue3-sfc-loader/dist/vue3-sfc-loader.js"></script>
-    <link rel="prefetch" href="/assets/main.mjs" />
-    <link rel="prefetch" href="/assets/MimeIcon.vue" />
-    <link rel="stylesheet" href="/assets/main.css" />
-    <link rel="manifest" href="/assets/manifest.json" />
-    <link rel="icon" type="image/png" href="/assets/favicon.png" />
-  </head>
-  <body>
-    <div id="app"></div>
-    <script>
-      const { loadModule } = window["vue3-sfc-loader"];
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Secure Chat</title>
+<link rel="stylesheet" href="/assets/chat.css">
+</head>
+<body>
+<div id="chat-app"></div>
+<script type="module">
+import { me, login, register, listRooms, createRoom, listMessages, sendMessage } from "/assets/chat-api.mjs";
+import { generateRoomKey, encryptText, decryptText } from "/assets/chat-crypto.mjs";
 
-      const options = {
-        moduleCache: { vue: Vue },
-        async getFile(url) {
-          const res = await fetch(url);
-          if (!res.ok)
-            throw Object.assign(new Error(res.statusText + " " + url), { res });
-          return {
-            getContentData: (asBinary) =>
-              asBinary ? res.arrayBuffer() : res.text(),
-          };
-        },
-        addStyle(textContent) {
-          const style = document.createElement("style");
-          style.textContent = textContent;
-          const ref = document.head.getElementsByTagName("style")[0] || null;
-          document.head.insertBefore(style, ref);
-        },
-      };
+const root=document.querySelector("#chat-app");
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+let state={user:null,rooms:[],room:null,messages:[],keys:new Map(),busy:false};
 
-      const app = Vue.createApp({
-        components: {
-          App: Vue.defineAsyncComponent(() =>
-            loadModule("/assets/App.vue", options)
-          ),
-        },
-        template: "<App></App>",
-      });
+function render(){
+ if(!state.user){root.innerHTML=`<main class="chat-auth"><section class="chat-card"><div class="brand">Secure Chat</div><h1>安全通信</h1><p class="muted">端到端加密 · 72 小时自动清理</p><div class="tabs"><button data-auth="login">登录</button><button data-auth="register">注册</button></div><form id="auth"><input name="email" type="email" placeholder="邮箱" required><input name="password" type="password" placeholder="密码（至少 8 位）" required><input name="nickname" placeholder="昵称" style="display:none"><button class="primary">继续</button><div id="auth-error" class="error"></div></form></section></main>`;return}
+ root.innerHTML=`<main class="chat-shell"><aside class="chat-sidebar"><div class="side-head"><div><strong>${esc(state.user.nickname)}</strong><small>${esc(state.user.email)}</small></div><button id="logout">退出</button></div><div class="room-create"><input id="room-name" placeholder="新建安全房间"><button id="new-room">＋</button></div><div class="room-list">${state.rooms.map(r=>`<button class="room-item ${state.room?.id===r.id?"active":""}" data-room="${r.id}"><b>${esc(r.name)}</b><small>剩余 ${Math.max(0,Math.ceil((r.expires_at-Date.now())/3600000))} 小时</small></button>`).join("")||'<div class="chat-empty">还没有房间</div>'}</div></aside><section class="chat-main"><header class="chat-header"><div><strong>${esc(state.room?.name||"选择房间")}</strong><small>${state.room?"消息仅保留 72 小时":""}</small></div></header><div class="chat-messages" id="messages">${state.messages.map(m=>`<div class="bubble ${m.sender_id===state.user.id?"me":""}">${esc(m.text||"无法解密的消息")}<small>${new Date(m.created_at).toLocaleTimeString()}</small></div>`).join("")||'<div class="chat-empty">选择一个房间开始安全通信</div>'}</div><form class="chat-compose" id="compose"><input id="message" placeholder="输入加密消息…" autocomplete="off" ${state.room?"":"disabled"}><button class="primary" ${state.room?"":"disabled"}>发送</button></form></section></main>`;
+}
+async function refreshRooms(){state.rooms=(await listRooms()).rooms||[];render()}
+async function openRoom(id){state.room=state.rooms.find(r=>r.id===id)||null;if(!state.room)return;let key=state.keys.get(id);if(!key){key=await generateRoomKey();state.keys.set(id,key)}const data=await listMessages(id);state.messages=[];for(const m of data.messages||[]){let text="无法解密的消息";try{text=await decryptText(key,JSON.parse(m.ciphertext))}catch{}state.messages.push({...m,text})}render()}
+root.addEventListener("click",async e=>{const a=e.target.closest("[data-auth]");if(a){document.querySelectorAll("[data-auth]").forEach(x=>x.classList.remove("active"));a.classList.add("active");document.querySelector('[name="nickname"]').style.display=a.dataset.auth==="register"?"block":"none";root.dataset.mode=a.dataset.auth}const r=e.target.closest("[data-room]");if(r)await openRoom(r.dataset.room);if(e.target.id==="new-room"){const n=document.querySelector("#room-name").value.trim();if(n){await createRoom(n);await refreshRooms()}}if(e.target.id==="logout"){document.cookie="chat_session=; Max-Age=0; Path=/";location.reload()}}); 
+root.addEventListener("submit",async e=>{e.preventDefault();if(e.target.id==="auth"){const f=new FormData(e.target);try{if((root.dataset.mode||"login")==="register")await register({email:f.get("email"),password:f.get("password"),nickname:f.get("nickname")});else await login({email:f.get("email"),password:f.get("password")});state.user=(await me()).user;await refreshRooms()}catch(x){document.querySelector("#auth-error").textContent=x.message}}if(e.target.id==="compose"&&state.room){const input=document.querySelector("#message"),text=input.value.trim();if(!text)return;const key=state.keys.get(state.room.id);const ciphertext=JSON.stringify(await encryptText(key,text));await sendMessage(state.room.id,{kind:"text",ciphertext});input.value="";await openRoom(state.room.id)}});
 
-      app.mount("#app");
-    </script>
-
-    <script type="module"></script>
-  </body>
-</html>
+(async()=>{try{state.user=(await me()).user;await refreshRooms()}catch{state.user=null;render();root.dataset.mode="login";document.querySelector('[data-auth="login"]')?.classList.add("active")}})();
+</script></body></html>
