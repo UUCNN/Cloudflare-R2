@@ -18,3 +18,5 @@ export const inviteToRoom=(room,email)=>request("/api/chat/rooms/"+encodeURIComp
 export const acceptInvite=inviteId=>request("/api/chat/rooms/invites/accept",{method:"POST",body:JSON.stringify({inviteId})});
 
 export const uploadEncryptedMedia=async(room,blob)=>{const r=await fetch("/api/chat/rooms/"+encodeURIComponent(room)+"/media",{method:"POST",credentials:"include",body:blob,headers:{"content-type":"application/octet-stream"}});const d=await r.json();if(!r.ok)throw new Error(d.error||"媒体上传失败");return d};
+
+export async function uploadVoice(room,blob){return uploadEncryptedMedia(room,blob)}
