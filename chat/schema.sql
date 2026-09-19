@@ -43,3 +43,19 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS idx_messages_room_time ON messages(room_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_expiry ON messages(expires_at);
 CREATE INDEX IF NOT EXISTS idx_rooms_expiry ON rooms(expires_at);
+CREATE TABLE IF NOT EXISTS devices (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  public_key TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  last_seen_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id);
+CREATE TABLE IF NOT EXISTS room_keys (
+  room_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  encrypted_key TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (room_id, device_id)
+);
