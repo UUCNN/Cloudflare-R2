@@ -10,3 +10,11 @@ export async function onRequestPost(context:any){
  await context.env.BUCKET.put(key,context.request.body,{httpMetadata:{contentType:"application/octet-stream"},customMetadata:{roomId,ownerId:userId}});
  return json({ok:true,mediaKey:key,messageId:id,expiresAt:room.expires_at});
 }
+export async function onRequestGet(context:any){
+ const userId=await auth(context);if(!userId||!context.env.DB||!context.env.BUCKET)return new Response("unauthorized",{status:401});
+ const roomId=String(context.params.room||""),key=decodeURIComponent(new URL(context.request.url).searchParams.get("key")||"");
+ const member=await context.env.DB.prepare("SELECT 1 FROM room_members m JOIN rooms r ON r.id=m.room_id WHERE m.room_id=? AND m.user_id=? AND r.expires_at>?" ).bind(roomId,userId,Date.now()).first();
+ if(!member||!key.startsWith("chat/"+roomId+"/"))return new Response("not found",{status:404});
+ const obj=await context.env.BUCKET.get(key);if(!obj)return new Response("not found",{status:404});
+ return new Response(obj.body,{headers:{"content-type":"application/octet-stream","cache-control":"private, no-store"}});
+}
