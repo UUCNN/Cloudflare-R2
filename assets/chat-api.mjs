@@ -7,3 +7,4 @@ export const listRooms=()=>request("/api/chat/rooms/list");
 export const listMessages=room=>request("/api/chat/rooms/"+encodeURIComponent(room)+"/messages");
 export const sendMessage=(room,data)=>request("/api/chat/rooms/"+encodeURIComponent(room)+"/messages",{method:"POST",body:JSON.stringify(data)});
 export const uploadMedia=(room,body,headers={})=>request("/api/chat/rooms/"+encodeURIComponent(room)+"/media",{method:"POST",body,headers});
+export function connectRoom(roomId,onMessage,onState=()=>{}){const proto=location.protocol==="https:"?"wss":"ws";const ws=new WebSocket(proto+"://"+location.host+"/api/chat/rooms/"+encodeURIComponent(roomId)+"/ws");ws.onopen=()=>onState("open");ws.onclose=()=>onState("closed");ws.onerror=()=>onState("error");ws.onmessage=e=>{try{onMessage(JSON.parse(e.data))}catch{}};return ws}
