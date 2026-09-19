@@ -20,3 +20,5 @@ export const acceptInvite=inviteId=>request("/api/chat/rooms/invites/accept",{me
 export const uploadEncryptedMedia=async(room,blob)=>{const r=await fetch("/api/chat/rooms/"+encodeURIComponent(room)+"/media",{method:"POST",credentials:"include",body:blob,headers:{"content-type":"application/octet-stream"}});const d=await r.json();if(!r.ok)throw new Error(d.error||"媒体上传失败");return d};
 
 export async function uploadVoice(room,blob){return uploadEncryptedMedia(room,blob)}
+
+export function connectRoom(roomId,onMessage,onState=()=>{}){let ws,closed=false,timer;const connect=()=>{if(closed)return;const proto=location.protocol==="https:"?"wss":"ws";ws=new WebSocket(proto+"://"+location.host+"/api/chat/rooms/"+encodeURIComponent(roomId)+"/ws");ws.onopen=()=>onState("open");ws.onmessage=e=>{try{onMessage(JSON.parse(e.data))}catch{}};ws.onclose=()=>{onState("closed");if(!closed)timer=setTimeout(connect,1500)};ws.onerror=()=>onState("error")};connect();return{close(){closed=true;clearTimeout(timer);ws?.close()}}}
