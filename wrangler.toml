@@ -1,0 +1,19 @@
+name = "secure-chat"
+compatibility_date = "2026-09-19"
+pages_build_output_dir = "."
+[[durable_objects.bindings]]
+name = "CHAT_ROOMS"
+class_name = "ChatRoom"
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ChatRoom"]
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "YOUR_R2_BUCKET"
+[[d1_databases]]
+binding = "DB"
+database_name = "YOUR_D1_DATABASE"
+database_id = "YOUR_D1_DATABASE_ID"
+[[kv_namespaces]]
+binding = "CHAT_SESSIONS"
+id = "YOUR_KV_NAMESPACE_ID"
