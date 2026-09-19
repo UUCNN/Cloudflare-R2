@@ -17,3 +17,5 @@ export async function unwrapRoomKey(devicePrivateKey,envelope){const eph=await i
 export async function encryptFile(key,file){const iv=crypto.getRandomValues(new Uint8Array(12));const plain=await file.arrayBuffer();const data=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,plain);return{iv:btoa(String.fromCharCode(...iv)),blob:new Blob([data],{type:"application/octet-stream"})}}
 
 export async function decryptBlob(key,blob,ivEncoded,type){const iv=Uint8Array.from(atob(ivEncoded),x=>x.charCodeAt(0));const data=await blob.arrayBuffer();const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,data);return new Blob([plain],{type:type||"application/octet-stream"})}
+
+export async function encryptFileChunked(key,file,chunkSize=2*1024*1024,onProgress=()=>{}){const chunks=[];let offset=0;while(offset<file.size){const part=file.slice(offset,Math.min(offset+chunkSize,file.size));const enc=await encryptFile(key,part);chunks.push({iv:enc.iv,blob:enc.blob});offset+=part.size;onProgress(Math.round(offset/file.size*100))}return chunks}
