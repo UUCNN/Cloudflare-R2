@@ -2,18 +2,18 @@ function json(data:any,status=200){return Response.json(data,{status,headers:{"c
 async function auth(context:any){const c=context.request.headers.get("Cookie")||"";const t=c.match(/(?:^|;\s*)chat_session=([^;]+)/)?.[1];if(!t||!context.env.CHAT_SESSIONS)return null;const v=await context.env.CHAT_SESSIONS.get(t,"json");return v?.userId||v||null}
 async function roomMember(env:any,roomId:string,userId:string){return env.DB.prepare("SELECT r.id,r.name,r.expires_at FROM rooms r JOIN room_members m ON m.room_id=r.id WHERE r.id=? AND m.user_id=? AND r.expires_at>?").bind(roomId,userId,Date.now()).first()}
 export async function onRequestGet(context:any){
- const userId=await auth(context); if(!userId)return json({error:"unauthorized"},401);
- const roomId=String(context.params.room||""); const room:any=await roomMember(context.env,roomId,userId); if(!room)return json({error:"room not found"},404);
- const url=new URL(context.request.url), limit=Math.min(100,Math.max(1,Number(url.searchParams.get("limit")||50))), before=Number(url.searchParams.get("before")||Date.now());
+ const userId=await auth(context);if(!userId)return json({error:"unauthorized"},401);const roomId=String(context.params.room||"");const room:any=await roomMember(context.env,roomId,userId);if(!room)return json({error:"room not found"},404);
+ const url=new URL(context.request.url),limit=Math.min(100,Math.max(1,Number(url.searchParams.get("limit")||50))),before=Number(url.searchParams.get("before")||Date.now());
  const rows=await context.env.DB.prepare("SELECT id,sender_id,kind,ciphertext,media_key,created_at,expires_at FROM messages WHERE room_id=? AND expires_at>? AND created_at<? ORDER BY created_at DESC LIMIT ?").bind(roomId,Date.now(),before,limit).all();
  return json({room,messages:(rows.results||[]).reverse()});
 }
 export async function onRequestPost(context:any){
- const userId=await auth(context); if(!userId)return json({error:"unauthorized"},401);
- const roomId=String(context.params.room||""); const room:any=await roomMember(context.env,roomId,userId); if(!room)return json({error:"room not found"},404);
- const body=await context.request.json().catch(()=>null), kind=String(body?.kind||"text"), ciphertext=String(body?.ciphertext||""), mediaKey=body?.mediaKey?String(body.mediaKey):null;
- if(!["text","image","video","audio","file"].includes(kind)||!ciphertext||ciphertext.length>2_000_000||mediaKey&&mediaKey.length>500)return json({error:"invalid message"},400);
- const now=Date.now(), id=crypto.randomUUID(), expires=Math.min(room.expires_at,now+72*60*60*1000);
+ const userId=await auth(context);if(!userId)return json({error:"unauthorized"},401);const roomId=String(context.params.room||"");const room:any=await roomMember(context.env,roomId,userId);if(!room)return json({error:"room not found"},404);
+ const body=await context.request.json().catch(()=>null),kind=String(body?.kind||"text"),ciphertext=String(body?.ciphertext||""),mediaKey=body?.mediaKey?String(body.mediaKey):null;
+ if(!["text","image","video","audio","file"].includes(kind)||!ciphertext||ciphertext.length>2_000_000)return json({error:"invalid message"},400);
+ const now=Date.now(),id=crypto.randomUUID(),expires=Math.min(room.expires_at,now+72*60*60*1000);
  await context.env.DB.prepare("INSERT INTO messages(id,room_id,sender_id,kind,ciphertext,media_key,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?)").bind(id,roomId,userId,kind,ciphertext,mediaKey,now,expires).run();
+ const durable=context.env.CHAT_ROOMS;
+ if(durable){try{const stub=durable.get(durable.idFromName(roomId));await stub.fetch("https://chat-room/ws",{headers:{"x-chat-user":userId},method:"POST",body:JSON.stringify({type:"message",message:{id,roomId,senderId:userId,kind,ciphertext,mediaKey,createdAt:now,expiresAt:expires}})});}catch{}}
  return json({ok:true,message:{id,roomId,senderId:userId,kind,ciphertext,mediaKey,createdAt:now,expiresAt:expires}});
 }
