@@ -22,3 +22,5 @@ export const uploadEncryptedMedia=async(room,blob)=>{const r=await fetch("/api/c
 export async function uploadVoice(room,blob){return uploadEncryptedMedia(room,blob)}
 
 export function connectRoom(roomId,onMessage,onState=()=>{}){let ws,closed=false,timer;const connect=()=>{if(closed)return;const proto=location.protocol==="https:"?"wss":"ws";ws=new WebSocket(proto+"://"+location.host+"/api/chat/rooms/"+encodeURIComponent(roomId)+"/ws");ws.onopen=()=>onState("open");ws.onmessage=e=>{try{onMessage(JSON.parse(e.data))}catch{}};ws.onclose=()=>{onState("closed");if(!closed)timer=setTimeout(connect,1500)};ws.onerror=()=>onState("error")};connect();return{close(){closed=true;clearTimeout(timer);ws?.close()}}}
+
+export const syncMessages=async(room,before)=>listMessages(room)+"";
