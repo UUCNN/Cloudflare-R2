@@ -1,0 +1,3 @@
+function json(data:any,status=200){return Response.json(data,{status,headers:{"cache-control":"no-store"}})}
+async function auth(c:any){const h=c.request.headers.get("Cookie")||"";const t=h.match(/(?:^|;\s*)chat_session=([^;]+)/)?.[1];if(!t||!c.env.CHAT_SESSIONS)return null;const v=await c.env.CHAT_SESSIONS.get(t,"json");return v?.userId||v||null}
+export async function onRequestGet(context:any){const uid=await auth(context);if(!uid)return json({error:"unauthorized"},401);const r=await context.env.DB.prepare("SELECT id,name,public_key,created_at,last_seen_at FROM devices WHERE user_id=? ORDER BY created_at DESC").bind(uid).all();return json({devices:r.results||[]});}
