@@ -13,3 +13,6 @@ export const registerDevice=body=>request("/api/chat/devices/register",{method:"
 export const listDevices=()=>request("/api/chat/devices/list");
 export const saveRoomKey=(roomId,body)=>request("/api/chat/rooms/"+encodeURIComponent(roomId)+"/keys",{method:"POST",body:JSON.stringify(body)});
 export const getRoomKeys=roomId=>request("/api/chat/rooms/"+encodeURIComponent(roomId)+"/keys");
+
+export const inviteToRoom=(room,email)=>request("/api/chat/rooms/"+encodeURIComponent(room)+"/invite",{method:"POST",body:JSON.stringify({email})});
+export const acceptInvite=inviteId=>request("/api/chat/rooms/invites/accept",{method:"POST",body:JSON.stringify({inviteId})});
