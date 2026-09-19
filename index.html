@@ -10,6 +10,27 @@
 <body>
 <div id="chat-app"></div>
 <script type="module">
+import { registerDevice, getRoomKeys, saveRoomKey } from "/assets/chat-api.mjs";
+import { generateDeviceKeyPair, exportPublicKey, exportPrivateKey, importPrivateKey, importPublicKey, wrapRoomKey, unwrapRoomKey } from "/assets/chat-crypto.mjs";
+const DEVICE_PRIVATE="secure_chat_device_private_v1",DEVICE_ID="secure_chat_device_id_v1";
+async function ensureDevice(){
+ let raw=localStorage.getItem(DEVICE_PRIVATE),id=localStorage.getItem(DEVICE_ID);
+ if(raw&&id)return {id,privateKey:await importPrivateKey(JSON.parse(raw))};
+ const pair=await generateDeviceKeyPair(),pub=await exportPublicKey(pair.publicKey),priv=await exportPrivateKey(pair.privateKey);
+ const r=await registerDevice({name:navigator.userAgent.slice(0,60),publicKey:JSON.stringify(pub)});
+ localStorage.setItem(DEVICE_PRIVATE,JSON.stringify(priv));localStorage.setItem(DEVICE_ID,r.deviceId);
+ return {id:r.deviceId,privateKey:pair.privateKey};
+}
+window.secureChatKeys={ensureDevice,async restoreRoomKey(roomId){
+ const d=await ensureDevice(), rows=(await getRoomKeys(roomId)).keys||[], mine=rows.find(x=>x.device_id===d.id);if(!mine)return null;
+ return unwrapRoomKey(d.privateKey,JSON.parse(mine.encrypted_key));
+},async wrapForCurrentDevice(roomId,roomKey){
+ const d=await ensureDevice(),rows=(await getRoomKeys(roomId)).keys||[],mine=rows.find(x=>x.device_id===d.id);
+ if(mine)return;
+ const pub=await importPublicKey(JSON.parse((await (await fetch("/api/chat/devices/list",{credentials:"include"})).json()).devices.find(x=>x.id===d.id).public_key));
+ const envelope=await wrapRoomKey(pub,roomKey);await saveRoomKey(roomId,{deviceId:d.id,encryptedKey:JSON.stringify(envelope)});
+}};
+
 import { me, login, register, listRooms, createRoom, listMessages, sendMessage } from "/assets/chat-api.mjs";
 import { generateRoomKey, encryptText, decryptText } from "/assets/chat-crypto.mjs";
 
