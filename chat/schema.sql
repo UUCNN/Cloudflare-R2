@@ -59,3 +59,14 @@ CREATE TABLE IF NOT EXISTS room_keys (
   created_at INTEGER NOT NULL,
   PRIMARY KEY (room_id, device_id)
 );
+
+CREATE TABLE IF NOT EXISTS room_invites (
+  id TEXT PRIMARY KEY,
+  room_id TEXT NOT NULL,
+  inviter_id TEXT NOT NULL,
+  invitee_email TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  accepted_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_room_invites_email ON room_invites(invitee_email,expires_at);
