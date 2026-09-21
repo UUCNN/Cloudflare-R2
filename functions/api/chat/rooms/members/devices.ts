@@ -1,0 +1,10 @@
+function json(data:any,status=200){return Response.json(data,{status,headers:{"cache-control":"no-store"}})}
+async function auth(c:any){const h=c.request.headers.get("Cookie")||"";const t=h.match(/(?:^|;\\s*)chat_session=([^;]+)/)?.[1];if(!t||!c.env.CHAT_SESSIONS)return null;const v=await c.env.CHAT_SESSIONS.get(t,"json");return v?.userId||v||null}
+export async function onRequestGet(context:any){
+ const uid=await auth(context);if(!uid||!context.env.DB)return json({error:"unauthorized"},401);
+ const roomId=String(context.params.room||"");
+ const member=await context.env.DB.prepare("SELECT 1 FROM room_members WHERE room_id=? AND user_id=?").bind(roomId,uid).first();
+ if(!member)return json({error:"forbidden"},403);
+ const rows=await context.env.DB.prepare("SELECT d.id,d.user_id,d.name,d.public_key FROM devices d JOIN room_members m ON m.user_id=d.user_id JOIN rooms r ON r.id=m.room_id WHERE m.room_id=? AND r.expires_at>? ORDER BY d.created_at").bind(roomId,Date.now()).all();
+ return json({devices:rows.results||[]});
+}
