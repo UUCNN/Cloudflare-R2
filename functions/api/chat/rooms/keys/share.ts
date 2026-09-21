@@ -4,10 +4,9 @@ export async function onRequestPost(context:any){
  const uid=await auth(context);if(!uid||!context.env.DB)return json({error:"unauthorized"},401);
  const roomId=String(context.params.room||""),b=await context.request.json().catch(()=>null),deviceId=String(b?.deviceId||""),encryptedKey=String(b?.encryptedKey||"");
  if(!deviceId||!encryptedKey||encryptedKey.length>20000)return json({error:"invalid key"},400);
- const member=await context.env.DB.prepare("SELECT 1 FROM room_members WHERE room_id=? AND user_id=?").bind(roomId,uid).first();
+ const room=await context.env.DB.prepare("SELECT id FROM rooms WHERE id=? AND owner_id=? AND expires_at>?").bind(roomId,uid,Date.now()).first();
  const target=await context.env.DB.prepare("SELECT d.id FROM devices d JOIN room_members m ON m.user_id=d.user_id WHERE d.id=? AND m.room_id=?").bind(deviceId,roomId).first();
- const room=await context.env.DB.prepare("SELECT 1 FROM rooms WHERE id=? AND expires_at>?").bind(roomId,Date.now()).first();
- if(!member||!target||!room)return json({error:"forbidden"},403);
+ if(!room||!target)return json({error:"forbidden"},403);
  await context.env.DB.prepare("INSERT OR REPLACE INTO room_keys(room_id,device_id,encrypted_key,created_at) VALUES(?,?,?,?)").bind(roomId,deviceId,encryptedKey,Date.now()).run();
  return json({ok:true});
 }
