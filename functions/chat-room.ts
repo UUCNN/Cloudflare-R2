@@ -1,22 +1,27 @@
 type Client={ws:WebSocket,userId:string,roomId:string};
 export class ChatRoom{
- state:any; clients=new Map<WebSocket,string>();
- constructor(state:any){this.state=state}
+ state:any; env:any; clients=new Map<WebSocket,string>();
+ constructor(state:any,env:any){this.state=state;this.env=env}
  async fetch(request:Request){
   const url=new URL(request.url);
+  const secret=request.headers.get("x-chat-internal-secret");
+  if(!this.env.CHAT_WS_INTERNAL_SECRET||secret!==this.env.CHAT_WS_INTERNAL_SECRET)return new Response("Forbidden",{status:403});
+  if(request.method==="POST"&&url.pathname.endsWith("/internal/broadcast")){
+   const body=await request.json().catch(()=>null);
+   const msg=body?.message;
+   if(body?.type!=="message"||!msg||typeof msg.roomId!=="string"||typeof msg.senderId!=="string"||typeof msg.ciphertext!=="string"||msg.ciphertext.length>2_000_000)return new Response("Invalid message",{status:400});
+   const out=JSON.stringify({type:"message",message:msg});
+   for(const ws of this.clients.keys()){try{ws.send(out)}catch{}}
+   return new Response("ok");
+  }
   if(request.method!=="GET"||!url.pathname.endsWith("/ws"))return new Response("Not found",{status:404});
-  const uid=request.headers.get("x-chat-user");
-  if(!uid)return new Response("Unauthorized",{status:401});
-  const pair=new WebSocketPair();const client=pair[1];this.state.acceptWebSocket(client);this.clients.set(client,uid);
-  client.addEventListener("message",event=>this.onMessage(client,event.data));
-  client.addEventListener("close",()=>this.clients.delete(client));client.addEventListener("error",()=>this.clients.delete(client));
+  const uid=request.headers.get("x-chat-user"),roomId=request.headers.get("x-chat-room");
+  if(!uid||!roomId)return new Response("Unauthorized",{status:401});
+  const pair=new WebSocketPair(),client=pair[1];
+  this.state.acceptWebSocket(client);this.clients.set(client,uid);
+  client.addEventListener("close",()=>this.clients.delete(client));
+  client.addEventListener("error",()=>this.clients.delete(client));
   return new Response(null,{status:101,webSocket:pair[0]});
- }
- onMessage(sender:WebSocket,data:any){
-  let msg:any;try{msg=JSON.parse(typeof data==="string"?data:"")}catch{return}
-  if(!msg||msg.type!=="message"||typeof msg.ciphertext!=="string")return;
-  const out=JSON.stringify({type:"message",message:{...msg,senderId:this.clients.get(sender)||null}});
-  for(const ws of this.clients.keys()){try{ws.send(out)}catch{}}
  }
 }
 export default ChatRoom;
