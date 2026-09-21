@@ -15,7 +15,7 @@ export const getRoomKeys=roomId=>request("/api/chat/rooms/"+encodeURIComponent(r
 export const inviteToRoom=(room,email)=>request("/api/chat/rooms/"+encodeURIComponent(room)+"/invite",{method:"POST",body:JSON.stringify({email})});
 export const acceptInvite=inviteId=>request("/api/chat/rooms/invites/accept",{method:"POST",body:JSON.stringify({inviteId})});
 export const uploadEncryptedMedia=async(room,blob)=>{const r=await fetch("/api/chat/rooms/"+encodeURIComponent(room)+"/media",{method:"POST",credentials:"include",body:blob,headers:{"content-type":"application/octet-stream"}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"媒体上传失败");return d};
-export const uploadVoice=(room,blob)=>uploadEncryptedMedia(room,blob);
+export const uploadVoice=(room,blob)=>uploadEncryptedMedia(room,blob);\nexport const deleteMedia=(room,key)=>request("/api/chat/rooms/"+encodeURIComponent(room)+"/media?key="+encodeURIComponent(key),{method:"DELETE"});
 export function connectRoom(roomId,onMessage,onState=()=>{return}){
  let ws,closed=false,timer;
  const connect=()=>{if(closed)return;const proto=location.protocol==="https:"?"wss":"ws";ws=new WebSocket(proto+"://"+location.host+"/api/chat/rooms/"+encodeURIComponent(roomId)+"/ws");ws.onopen=()=>onState("open");ws.onmessage=e=>{try{onMessage(JSON.parse(e.data))}catch{}};ws.onclose=()=>{onState("closed");if(!closed)timer=setTimeout(connect,1500)};ws.onerror=()=>onState("error")};
