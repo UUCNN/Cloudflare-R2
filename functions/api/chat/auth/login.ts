@@ -19,6 +19,6 @@ export async function onRequestPost(context:any){
  const user:any=await env.DB.prepare("SELECT id,email,nickname,avatar_url,password_hash FROM users WHERE email=?").bind(email).first();
  if(!user||!(await verifyPassword(password,user.password_hash)))return json({error:"invalid email or password"},401);
  const token=crypto.randomUUID()+"."+crypto.randomUUID(), now=Date.now();
- await env.CHAT_SESSIONS.put(token,JSON.stringify({userId:user.id,createdAt:now}),{expirationTtl:2592000});
+ await env.CHAT_SESSIONS.put(token,user.id,{expirationTtl:2592000});
  return new Response(JSON.stringify({ok:true,user:{id:user.id,email:user.email,nickname:user.nickname,avatarUrl:user.avatar_url}}),{status:200,headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":`chat_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`}});
 }
