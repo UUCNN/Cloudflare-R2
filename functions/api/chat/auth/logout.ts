@@ -2,7 +2,7 @@ function json(data:any,status=200,headers:any={}){return Response.json(data,{sta
 export async function onRequestPost(context:any){
  const {env,request}=context;
  const cookie=request.headers.get("Cookie")||"";
- const token=cookie.match(/(?:^|;\s*)chat_session=([^;]+)/)?.[1];
+ const token=cookie.match(/(?:^|;\\s*)chat_session=([^;]+)/)?.[1];
  if(token&&env.CHAT_SESSIONS) await env.CHAT_SESSIONS.delete(token);
- return json({ok:true},{status:200});
+ return json({ok:true},200,{ "set-cookie":"chat_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0" });
 }
