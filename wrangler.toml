@@ -4,9 +4,7 @@ pages_build_output_dir = "."
 [[durable_objects.bindings]]
 name = "CHAT_ROOMS"
 class_name = "ChatRoom"
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["ChatRoom"]
+script_name = "secure-chat-room"
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "YOUR_R2_BUCKET"
