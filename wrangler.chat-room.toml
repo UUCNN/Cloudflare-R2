@@ -2,7 +2,8 @@ name = "secure-chat-room"
 main = "./chat-room-worker.ts"
 compatibility_date = "2026-09-19"
 
-[durable_objects]
-[durable_objects.bindings]
+[[durable_objects.bindings]]
 name = "CHAT_ROOMS"
 class_name = "ChatRoom"
+
+[durable_objects]
