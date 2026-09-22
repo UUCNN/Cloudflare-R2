@@ -6,8 +6,14 @@ export async function encryptText(key,text){const iv=crypto.getRandomValues(new 
 export async function decryptText(key,payload){const iv=Uint8Array.from(atob(payload.iv),c=>c.charCodeAt(0)),data=Uint8Array.from(atob(payload.data),c=>c.charCodeAt(0));return dec.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv},key,data))}
 export async function encryptBlob(key,blob){const iv=crypto.getRandomValues(new Uint8Array(12)),data=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,await blob.arrayBuffer());return{iv,data:new Blob([data],{type:"application/octet-stream"})}}
 
-export async function generateDeviceKeyPair(){return crypto.subtle.generateKey({name:"ECDH",namedCurve:"P-256"},true,["deriveBits"])}
-export async function exportPublicKey(key){const raw=await crypto.subtle.exportKey("jwk",key);return raw}
+const DEVICE_DB="secure_chat_device_v1",DEVICE_STORE="keys",DEVICE_KEY="private_key";
+function openDeviceDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DEVICE_DB,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(DEVICE_STORE))req.result.createObjectStore(DEVICE_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error("device key storage unavailable"))})}
+export async function loadDevicePrivateKey(){const db=await openDeviceDb();return new Promise((resolve,reject)=>{const tx=db.transaction(DEVICE_STORE,"readonly"),req=tx.objectStore(DEVICE_STORE).get(DEVICE_KEY);req.onsuccess=()=>{db.close();resolve(req.result||null)};req.onerror=()=>{db.close();reject(req.error)}})}
+export async function saveDevicePrivateKey(key){const db=await openDeviceDb();return new Promise((resolve,reject)=>{const tx=db.transaction(DEVICE_STORE,"readwrite");tx.objectStore(DEVICE_STORE).put(key,DEVICE_KEY);tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>{db.close();reject(tx.error||new Error("device key storage failed"))}})}
+export async function clearDevicePrivateKey(){try{const db=await openDeviceDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DEVICE_STORE,"readwrite");tx.objectStore(DEVICE_STORE).delete(DEVICE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}catch{}}
+
+export async function generateDeviceKeyPair(){const pair=await crypto.subtle.generateKey({name:"ECDH",namedCurve:"P-256"},true,["deriveBits"]);const pub=await crypto.subtle.exportKey("jwk",pair.publicKey);const priv=await crypto.subtle.exportKey("jwk",pair.privateKey);const locked=await crypto.subtle.importKey("jwk",priv,{name:"ECDH",namedCurve:"P-256"},false,["deriveBits"]);return{publicKey:pair.publicKey,privateKey:locked,publicJwk:pub}}
+export async function exportPublicKey(key){return crypto.subtle.exportKey("jwk",key)}
 export async function exportPrivateKey(key){return crypto.subtle.exportKey("jwk",key)}
 export async function importPublicKey(jwk){return crypto.subtle.importKey("jwk",jwk,{name:"ECDH",namedCurve:"P-256"},true,[])}
 export async function importPrivateKey(jwk){return crypto.subtle.importKey("jwk",jwk,{name:"ECDH",namedCurve:"P-256"},false,["deriveBits"])}
@@ -15,7 +21,5 @@ export async function wrapRoomKey(devicePublicKey,roomKey){const eph=await gener
 export async function unwrapRoomKey(devicePrivateKey,envelope){const eph=await importPublicKey(envelope.ephemeralPublicKey);const bits=await crypto.subtle.deriveBits({name:"ECDH",public:eph},devicePrivateKey,256);const wrap=await crypto.subtle.importKey("raw",bits,{name:"AES-GCM"},false,["decrypt"]);const iv=Uint8Array.from(atob(envelope.iv),c=>c.charCodeAt(0));const data=Uint8Array.from(atob(envelope.data),c=>c.charCodeAt(0));const raw=await crypto.subtle.decrypt({name:"AES-GCM",iv},wrap,data);return crypto.subtle.importKey("raw",raw,{name:"AES-GCM"},false,["encrypt","decrypt"])}
 
 export async function encryptFile(key,file){const iv=crypto.getRandomValues(new Uint8Array(12));const plain=await file.arrayBuffer();const data=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,plain);return{iv:btoa(String.fromCharCode(...iv)),blob:new Blob([data],{type:"application/octet-stream"})}}
-
 export async function decryptBlob(key,blob,ivEncoded,type){const iv=Uint8Array.from(atob(ivEncoded),x=>x.charCodeAt(0));const data=await blob.arrayBuffer();const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,data);return new Blob([plain],{type:type||"application/octet-stream"})}
-
 export async function encryptFileChunked(key,file,chunkSize=2*1024*1024,onProgress=()=>{}){const chunks=[];let offset=0;while(offset<file.size){const part=file.slice(offset,Math.min(offset+chunkSize,file.size));const enc=await encryptFile(key,part);chunks.push({iv:enc.iv,blob:enc.blob});offset+=part.size;onProgress(Math.round(offset/file.size*100))}return chunks}
