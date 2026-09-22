@@ -11,7 +11,7 @@
 <div id="chat-app"></div>
 <script type="module">
 import {registerDevice,getRoomKeys,saveRoomKey,listDevices,me,login,register,listRooms,createRoom,listMessages,sendMessage,connectRoom,uploadEncryptedMedia,uploadVoice,logout,inviteToRoom,acceptInvite,deleteMedia} from "/assets/chat-api.mjs";
-import {generateDeviceKeyPair,loadDevicePrivateKey,saveDevicePrivateKey,clearDevicePrivateKey,importPrivateKey,importPublicKey,wrapRoomKey,unwrapRoomKey,generateRoomKey,encryptText,decryptText,encryptFile,decryptBlob} from "/assets/chat-crypto.mjs";
+import {generateDeviceKeyPair,loadDevicePrivateKey,saveDevicePrivateKey,importPrivateKey,importPublicKey,wrapRoomKey,unwrapRoomKey,generateRoomKey,encryptText,decryptText,encryptFile,decryptBlob} from "/assets/chat-crypto.mjs";
 const root=document.querySelector("#chat-app"),DEVICE_PRIVATE="secure_chat_device_private_v1",DEVICE_ID="secure_chat_device_id_v1";
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const normalize=m=>({...m,sender_id:m.sender_id??m.senderId,created_at:m.created_at??m.createdAt,media_key:m.media_key??m.mediaKey});
