@@ -33,3 +33,25 @@ Dynamic room APIs live under functions/api/chat/rooms/[room]/... so the deployed
 - /api/chat/rooms/:room/keys
 - /api/chat/rooms/:room/ws
 - /api/chat/rooms/:room/invite
+
+
+## Cloudflare deployment layout
+The Pages project and the Durable Object namespace are deployed separately. Pages Functions cannot create/deploy the Durable Object Worker itself.
+
+1. Configure the real D1, R2 and KV IDs in `wrangler.toml` (the repository keeps placeholders and does not contain account-specific IDs).
+2. Deploy the dedicated Durable Object Worker with:
+   ```
+   npx wrangler deploy -c wrangler.chat-room.toml
+   ```
+3. Set `CHAT_WS_INTERNAL_SECRET` on the Durable Object Worker and on the Pages project, using the same random value:
+   ```
+   npx wrangler secret put CHAT_WS_INTERNAL_SECRET -c wrangler.chat-room.toml
+   npx wrangler pages secret put CHAT_WS_INTERNAL_SECRET
+   ```
+4. Configure `CHAT_CLEANUP_SECRET` for the Pages project before invoking the cleanup endpoint.
+5. Deploy the Pages project after the real bindings are filled in:
+   ```
+   npx wrangler pages deploy .
+   ```
+
+The Pages Wrangler binding points `CHAT_ROOMS` at the separate Worker named `secure-chat-room`. This matches Cloudflare's requirement that a Pages Durable Object binding use an external Durable Object Worker.
