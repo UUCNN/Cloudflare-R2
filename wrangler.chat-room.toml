@@ -5,5 +5,3 @@ compatibility_date = "2026-09-19"
 [[durable_objects.bindings]]
 name = "CHAT_ROOMS"
 class_name = "ChatRoom"
-
-[durable_objects]
