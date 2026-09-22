@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "description": "CloudFlare R2 storage manager with Pages and Workers.",
   "scripts": {
-    "dev": "wrangler pages dev . --r2 BUCKET"
+    "dev": "wrangler pages dev . --r2 BUCKET",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -16,7 +17,7 @@
   },
   "homepage": "https://github.com/longern/FlareDrive#readme",
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.3.1",
-    "wrangler": "^2.6.2"
+    "@cloudflare/workers-types": "^5.20260920.1",
+    "wrangler": "^4.136.1"
   }
 }
