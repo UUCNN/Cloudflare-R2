@@ -2,6 +2,7 @@ name = "secure-chat-room"
 main = "./chat-room-worker.ts"
 compatibility_date = "2026-09-19"
 
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["ChatRoom"]
+[durable_objects]
+[durable_objects.bindings]
+name = "CHAT_ROOMS"
+class_name = "ChatRoom"
