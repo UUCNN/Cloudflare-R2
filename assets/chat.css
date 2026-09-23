@@ -9,3 +9,5 @@
 .key-pending{margin:auto;max-width:420px;padding:28px;text-align:center;background:#fff;border:1px solid #dfe5ee;border-radius:18px;box-shadow:0 12px 30px rgba(30,45,70,.06)}
 .key-pending strong,.key-pending span{display:block}.key-pending strong{font-size:18px}.key-pending span{margin:8px 0 18px;color:#718096;font-size:13px}.key-pending .primary{display:inline-block}
 .link-btn{border:0;background:transparent;color:#365a9a;cursor:pointer;padding:2px;text-align:right}
+
+.media-status{font-size:12px;color:#718096;align-self:center;white-space:nowrap}.chat-compose .media-status:empty{display:none}@media(max-width:720px){.media-status{flex:1 1 100%;order:4}}
