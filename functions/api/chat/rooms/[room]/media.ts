@@ -9,14 +9,14 @@ export async function onRequestPost(context:any){
 export async function onRequestDelete(context:any){
  const userId=await sessionUserId(context);if(!userId||!context.env.DB||!context.env.BUCKET)return json({error:"unauthorized or storage unavailable"},401);
  const roomId=String(context.params.room||""),room=await member(context.env,roomId,userId);if(!room)return json({error:"room not found"},404);
- const key=decodeURIComponent(new URL(context.request.url).searchParams.get("key")||"");if(!key.startsWith("chat/"+roomId+"/"))return json({error:"invalid media key"},400);
+ const key=decodeURIComponent(new URL(context.request.url).searchParams.get("key")||"");if(!key.startsWith("chat/"+roomId+"/")||key.length>512)return json({error:"invalid media key"},400);
  const obj=await context.env.BUCKET.head(key);if(!obj)return json({ok:true});
  if(obj.customMetadata?.ownerId!==userId)return json({error:"forbidden"},403);
  await context.env.BUCKET.delete(key);return json({ok:true})
 }
 export async function onRequestGet(context:any){
  const userId=await sessionUserId(context);if(!userId||!context.env.DB||!context.env.BUCKET)return new Response("unauthorized",{status:401});
- const roomId=String(context.params.room||""),key=decodeURIComponent(new URL(context.request.url).searchParams.get("key")||"");
+ const roomId=String(context.params.room||""),key=decodeURIComponent(new URL(context.request.url).searchParams.get("key")||"");if(key.length>512||!key.startsWith("chat/"+roomId+"/"))return new Response("not found",{status:404});
  const m=await member(context.env,roomId,userId);if(!m||!key.startsWith("chat/"+roomId+"/"))return new Response("not found",{status:404});
  const obj=await context.env.BUCKET.get(key);if(!obj)return new Response("not found",{status:404});
  return new Response(obj.body,{headers:{"content-type":"application/octet-stream","cache-control":"private, no-store"}})
