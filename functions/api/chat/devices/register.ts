@@ -1,5 +1,5 @@
 function json(data:any,status=200){return Response.json(data,{status,headers:{"cache-control":"no-store"}})}
-async function auth(c:any){const h=c.request.headers.get("Cookie")||"";const t=h.match(/(?:^|;\s*)chat_session=([^;]+)/)?.[1];if(!t||!c.env.CHAT_SESSIONS)return null;const v=await c.env.CHAT_SESSIONS.get(t);return v?.userId||v||null}
+async function auth(c:any){const h=c.request.headers.get("Cookie")||"";const t=h.match(/(?:^|;\\s*)chat_session=([^;]+)/)?.[1];if(!t||!c.env.CHAT_SESSIONS)return null;const data=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));const hash=Array.from(new Uint8Array(data)).map(b=>b.toString(16).padStart(2,"0")).join("");return c.env.CHAT_SESSIONS.get("session:"+hash)}
 function validJwk(value:string){
  if(value.length>5000)return false;
  try{const k=JSON.parse(value);return k&&k.kty==="EC"&&k.crv==="P-256"&&typeof k.x==="string"&&typeof k.y==="string"&&k.x.length<=200&&k.y.length<=200}catch{return false}
