@@ -7,5 +7,5 @@ export async function onRequestPost(context:any){
   context.env.DB.prepare("INSERT INTO rooms(id,owner_id,name,expires_at,created_at) VALUES(?,?,?,?,?)").bind(id,userId,name,expires,now),
   context.env.DB.prepare("INSERT INTO room_members(room_id,user_id,role,joined_at) VALUES(?,?,?,?)").bind(id,userId,"owner",now)
  ]);
- return json({ok:true,room:{id,name,expiresAt:expires}});
+ return json({ok:true,room:{id,name,owner_id:userId,expires_at:expires,expiresAt:expires}});
 }
