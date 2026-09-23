@@ -3,7 +3,7 @@ async function sessionUserId(context:any){const c=context.request.headers.get("C
 export async function onRequestPost(context:any){
  const userId=await sessionUserId(context);if(!userId||!context.env.DB||!context.env.BUCKET)return json({error:"unauthorized or storage unavailable"},401);
  const roomId=String(context.params.room||""),room:any=await member(context.env,roomId,userId);if(!room)return json({error:"room not found"},404);
- const length=Number(context.request.headers.get("content-length")||0);if(!Number.isFinite(length)||length<=0)return json({error:"content-length required"},411);if(length>100*1024*1024)return json({error:"file too large"},413);
+ const length=Number(context.request.headers.get("content-length")||0);if(Number.isFinite(length)&&length>100*1024*1024)return json({error:"file too large"},413);
  const id=crypto.randomUUID(),key="chat/"+roomId+"/"+id+".bin";await context.env.BUCKET.put(key,context.request.body,{httpMetadata:{contentType:"application/octet-stream"},customMetadata:{roomId,ownerId:userId}});return json({ok:true,mediaKey:key,uploadId:id,expiresAt:room.expires_at})
 }
 export async function onRequestDelete(context:any){
